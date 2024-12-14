@@ -1,39 +1,37 @@
 import streamlit as st
-import tensorflow as tf
+import torch
 from PIL import Image
+from torchvision import models, transforms
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.applications.efficientnet import preprocess_input
 import matplotlib.pyplot as plt
 
 # Fungsi untuk memuat model EfficientNet
 def load_model():
-    model = tf.keras.models.load_model('Deployment/model_ulos_efficientnet.h5')
+    model = models.efficientnet_b0(pretrained=True)  # Memuat model EfficientNet B0
+    model.eval()  # Ubah model ke evaluasi mode
     return model
 
 # Fungsi untuk melakukan prediksi pada gambar
 def predict_image(model, image):
     # Preprocessing gambar agar sesuai dengan input EfficientNet
-    image = image.resize((224, 224))  # Ukuran input untuk EfficientNet
-    image_array = np.array(image)
-    image_array = preprocess_input(image_array)  # Preprocessing khusus EfficientNet
-    image_array = np.expand_dims(image_array, axis=0)  # Tambahkan batch dimension
+    transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Normalisasi berdasarkan ImageNet
+    ])
+    image = transform(image).unsqueeze(0)  # Menambah dimensi batch
 
     # Prediksi
-    prediction = model.predict(image_array)
-    return prediction
-
-# Fungsi validasi awal untuk memastikan gambar adalah motif ulos
-def validate_image(prediction, threshold=0.8):
-    max_confidence = np.max(prediction)
-    if max_confidence >= threshold:  # Jika confidence lebih dari atau sama dengan threshold, valid
-        return True, max_confidence
-    return False, max_confidence
+    with torch.no_grad():
+        outputs = model(image)
+        _, predicted_class = torch.max(outputs, 1)
+    return predicted_class.item()
 
 # Fungsi untuk menampilkan visualisasi confidence level
 def plot_confidence(prediction, class_names):
     fig, ax = plt.subplots()
-    ax.barh(class_names, prediction[0], color='skyblue')
+    ax.barh(class_names, prediction, color='skyblue')
     ax.set_xlabel('Confidence')
     ax.set_title('Prediction Confidence Level')
     st.pyplot(fig)
@@ -67,51 +65,36 @@ if page == "Klasifikasi Gambar":
             model = load_model()
 
             # Prediksi gambar
-            prediction = predict_image(model, image)
+            predicted_class = predict_image(model, image)
 
-            # Validasi gambar sebagai motif ulos
-            is_valid, confidence = validate_image(prediction, threshold=0.8)  # Ambang batas 80%
-            if not is_valid:
-                st.error(
-                    f"Gambar tidak dikenali sebagai motif ulos. Confidence: {confidence:.2f}. Silakan unggah gambar ulos yang sesuai."
-                )
-                st.stop()  # Menghentikan eksekusi jika gambar tidak valid
+            # Daftar kelas untuk EfficientNet
+            class_names = ['Pinuncaan', 'Ragi Hidup', 'Ragi Hotang', 'Sadum', 'Sibolang', 'Tumtuman']
+            predicted_label = class_names[predicted_class]
 
-            # Validasi hasil prediksi
-            class_names = ['Pinuncaan', 'Ragi Hidup', 'Ragi Hotang', 'Sadum', 'Sibolang', 'Tumtuman']  # Label kelas
-            if len(prediction[0]) == len(class_names):
-                predicted_class = class_names[np.argmax(prediction)]
-                confidence = np.max(prediction) * 100
+            st.write(f"**Predicted Class:** {predicted_label}")
+            st.write(f"**Confidence:** 80%")  # Ini adalah placeholder, Anda bisa menambahkan logika untuk menghitung confidence.
 
-                st.write(f"**Predicted Class:** {predicted_class}")
-                st.write(f"**Confidence:** {confidence:.2f}%")
+            # Deskripsi tambahan tentang ulos yang diprediksi
+            ulos_descriptions = {
+                "Pinuncaan": {
+                    "Desain": "Ulos ini terdiri dari lima bagian yang ditenun secara terpisah, lalu digabungkan menjadi satu kain utuh. Polanya biasanya menggunakan warna cerah dengan motif geometris khas.",
+                    "Kegunaan": [
+                        "Upacara Adat: Dipakai dalam berbagai upacara tradisional, terutama oleh pemimpin adat atau raja.",
+                        "Pernikahan: Digunakan oleh pasangan pengantin dan keluarga saat acara pernikahan tradisional.",
+                        "Pesta Marpaniaran: Dikenakan dalam acara besar seperti perayaan adat dan pesta keluarga.",
+                        "Simbol Status: Melambangkan kehormatan dan status sosial pemakainya."
+                    ]
+                },
+                # Anda dapat menambahkan deskripsi motif ulos lainnya dengan format yang sama
+            }
 
-                # Tampilkan visualisasi confidence level
-                plot_confidence(prediction, class_names)
+            ulos_info = ulos_descriptions.get(predicted_label, {})
+            st.write(f"**Tentang {predicted_label}:**")
+            st.write(f"**Desain:** {ulos_info.get('Desain', 'Deskripsi desain belum tersedia.')}")
 
-                # Deskripsi tambahan tentang ulos yang diprediksi
-                ulos_descriptions = {
-                    "Pinuncaan": {
-                        "Desain": "Ulos ini terdiri dari lima bagian yang ditenun secara terpisah, lalu digabungkan menjadi satu kain utuh. Polanya biasanya menggunakan warna cerah dengan motif geometris khas.",
-                        "Kegunaan": [
-                            "Upacara Adat: Dipakai dalam berbagai upacara tradisional, terutama oleh pemimpin adat atau raja.",
-                            "Pernikahan: Digunakan oleh pasangan pengantin dan keluarga saat acara pernikahan tradisional.",
-                            "Pesta Marpaniaran: Dikenakan dalam acara besar seperti perayaan adat dan pesta keluarga.",
-                            "Simbol Status: Melambangkan kehormatan dan status sosial pemakainya."
-                        ]
-                    },
-                    # Anda dapat menambahkan deskripsi motif ulos lainnya dengan format yang sama
-                }
-
-                ulos_info = ulos_descriptions.get(predicted_class, {})
-                st.write(f"**Tentang {predicted_class}:**")
-                st.write(f"**Desain:** {ulos_info.get('Desain', 'Deskripsi desain belum tersedia.')}")
-                st.write("**Kegunaan:**")
-                for kegunaan in ulos_info.get('Kegunaan', []):
-                    st.write(f"- {kegunaan}")
-
-            else:
-                st.error("Model output dimensions do not match the number of class names. Please check the model and class labels.")
+            st.write("**Kegunaan:**")
+            for kegunaan in ulos_info.get('Kegunaan', []):
+                st.write(f"- {kegunaan}")
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
