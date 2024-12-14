@@ -46,7 +46,7 @@ if page == "Klasifikasi Gambar":
     st.markdown(
         """
         **Tentang Aplikasi:**
-        Aplikasi ini menggunakan model **Convolutional Neural Network (CNN)** untuk mengklasifikasikan jenis kain **Ulos** berdasarkan gambar yang diunggah pengguna. Model ini bertujuan untuk mendukung pelestarian budaya dan meningkatkan pemahaman tentang kain tradisional ulos.
+        Aplikasi ini bertujuan untuk mengenali dan mengklasifikasikan motif kain ulos menggunakan model kecerdasan buatan berbasis EfficientNet. Proyek ini mengintegrasikan teknologi modern untuk melestarikan warisan budaya Batak secara digital.
         """
     )
 
@@ -127,4 +127,4 @@ elif page == "Panduan Pengguna":
     )
 
 st.write("\n\n")
-st.write("Developed by Kelompok 3 - Data Mining")
+st.write("Developed by Kelompok 12 - Data Mining")
