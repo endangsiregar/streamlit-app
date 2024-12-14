@@ -2,18 +2,20 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.applications.efficientnet import preprocess_input
 import matplotlib.pyplot as plt
 
-# Fungsi untuk memuat model CNN
+# Fungsi untuk memuat model EfficientNet
 def load_model():
-    model = tf.keras.models.load_model('Deployment/model_ulos.h5')
+    model = tf.keras.models.load_model('Deployment/model_ulos_efficientnet.h5')
     return model
 
 # Fungsi untuk melakukan prediksi pada gambar
 def predict_image(model, image):
-    # Preprocessing gambar agar sesuai dengan input model
-    image = image.resize((150, 150))  # Sesuaikan ukuran input dengan model
-    image_array = np.array(image) / 255.0  # Normalisasi
+    # Preprocessing gambar agar sesuai dengan input EfficientNet
+    image = image.resize((224, 224))  # Ukuran input untuk EfficientNet
+    image_array = np.array(image)
+    image_array = preprocess_input(image_array)  # Preprocessing khusus EfficientNet
     image_array = np.expand_dims(image_array, axis=0)  # Tambahkan batch dimension
 
     # Prediksi
@@ -37,7 +39,7 @@ def plot_confidence(prediction, class_names):
 
 # Streamlit App
 st.set_page_config(layout="wide")
-st.title("Ulos Image Classification")
+st.title("Ulos Image Classification with EfficientNet")
 
 # Sidebar untuk navigasi
 page = st.sidebar.radio("Pilih Fitur", ["Klasifikasi Gambar", "Panduan Pengguna"])
@@ -89,15 +91,15 @@ if page == "Klasifikasi Gambar":
                 # Deskripsi tambahan tentang ulos yang diprediksi
                 ulos_descriptions = {
                     "Pinuncaan": {
-                        "Desain": "Ulos ini memiliki struktur yang terdiri dari lima bagian yang ditenun secara terpisah dan kemudian disatukan. Motifnya biasanya menggunakan warna-warna cerah dengan pola geometris yang khas.",
+                        "Desain": "Ulos ini terdiri dari lima bagian yang ditenun secara terpisah, lalu digabungkan menjadi satu kain utuh. Polanya biasanya menggunakan warna cerah dengan motif geometris khas.",
                         "Kegunaan": [
-                            "Acara Resmi: Sering digunakan dalam upacara adat dan acara resmi oleh pemimpin atau raja.",
-                            "Pernikahan: Dipakai oleh pengantin dan keluarga dalam perayaan pernikahan.",
-                            "Marpaniaran: Digunakan saat pesta besar dalam acara marpaniaran.",
-                            "Simbol Kehormatan: Melambangkan status dan kehormatan bagi pemakainya."
+                            "Upacara Adat: Dipakai dalam berbagai upacara tradisional, terutama oleh pemimpin adat atau raja.",
+                            "Pernikahan: Digunakan oleh pasangan pengantin dan keluarga saat acara pernikahan tradisional.",
+                            "Pesta Marpaniaran: Dikenakan dalam acara besar seperti perayaan adat dan pesta keluarga.",
+                            "Simbol Status: Melambangkan kehormatan dan status sosial pemakainya."
                         ]
                     },
-                    # Tambahkan deskripsi ulos lainnya di sini
+                    # Anda dapat menambahkan deskripsi motif ulos lainnya dengan format yang sama
                 }
 
                 ulos_info = ulos_descriptions.get(predicted_class, {})
